@@ -1,0 +1,15 @@
+[project]
+name = "hyundai-bluelink-addon"
+version = "1.0.0"
+description = "Home Assistant add-on for Hyundai Bluelink vehicle control"
+requires-python = ">=3.12"
+dependencies = [
+    "hyundai-kia-connect-api",
+    "cloudscraper",
+    "flask",
+    "requests",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
