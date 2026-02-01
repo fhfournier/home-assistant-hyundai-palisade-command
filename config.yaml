@@ -1,8 +1,8 @@
 name: Hyundai Bluelink Control
-version: "1.0.0"
+version: "1.0.1"
 slug: hyundai-bluelink
 description: Control your Hyundai/Kia vehicle via Bluelink/UVO
-url: https://github.com/yourusername/addon-hyundai-bluelink
+url: https://github.com/fhfournier/home-assistant-hyundai-palisade-command
 arch:
   - aarch64
   - amd64
