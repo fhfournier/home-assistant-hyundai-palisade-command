@@ -205,10 +205,19 @@ def stop_car():
     
     try:
         logger.info("Stopping vehicle...")
-        vm.stop_climate(CONFIG['vehicle_id'])
-        logger.info("✅ Vehicle stopped successfully")
         
-        return jsonify({'status': 'success', 'action': 'stop'}), 200
+        # Try stop_climate first
+        try:
+            vm.stop_climate(CONFIG['vehicle_id'])
+            logger.info("✅ Vehicle stopped successfully with stop_climate")
+            return jsonify({'status': 'success', 'action': 'stop', 'method': 'stop_climate'}), 200
+        except AttributeError:
+            # If stop_climate doesn't exist, try sending climate=False
+            logger.warning("stop_climate not available, trying alternative method...")
+            options = ClimateRequestOptions(climate=False)
+            vm.start_climate(CONFIG['vehicle_id'], options)
+            logger.info("✅ Vehicle stopped successfully with climate=False")
+            return jsonify({'status': 'success', 'action': 'stop', 'method': 'climate_false'}), 200
         
     except Exception as e:
         logger.error(f"Error stopping vehicle: {e}")
