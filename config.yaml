@@ -32,4 +32,3 @@ ports:
   8099/tcp: 8099
 ports_description:
   8099/tcp: Web API for vehicle control
-image: ghcr.io/yourusername/hyundai-bluelink-{arch}

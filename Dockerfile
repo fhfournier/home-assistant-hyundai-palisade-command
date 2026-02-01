@@ -1,22 +1,27 @@
-# Use UV for fast Python dependency installation
-FROM ghcr.io/astral-sh/uv:python3.12-alpine
+ARG BUILD_FROM
+FROM $BUILD_FROM
 
-# Install system dependencies
+# Install Python and UV
 RUN apk add --no-cache \
+    python3 \
+    py3-pip \
     libstdc++ \
-    ca-certificates
+    ca-certificates \
+    && pip3 install --no-cache-dir uv
 
 # Set working directory
 WORKDIR /app
 
-# Copy project configuration
+# Copy project files
 COPY pyproject.toml /app/pyproject.toml
-
-# Copy application files
 COPY rootfs/app/server.py /app/server.py
 
-# Sync dependencies using UV (creates .venv and installs everything)
-RUN uv sync --no-dev --frozen
+# Install dependencies with UV
+RUN uv pip install --system --no-cache \
+    hyundai-kia-connect-api \
+    cloudscraper \
+    flask \
+    requests
 
 # Create data directory for Home Assistant config
 RUN mkdir -p /data
@@ -24,5 +29,5 @@ RUN mkdir -p /data
 # Expose port
 EXPOSE 8099
 
-# Launch server using UV run (uses the .venv created by uv sync)
-CMD ["uv", "run", "python", "server.py"]
+# Launch server
+CMD ["python3", "/app/server.py"]
