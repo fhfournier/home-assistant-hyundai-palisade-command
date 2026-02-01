@@ -1,12 +1,13 @@
 [project]
 name = "hyundai-bluelink-addon"
-version = "1.0.0"
+version = "1.2.0"
 description = "Home Assistant add-on for Hyundai Bluelink vehicle control"
 requires-python = ">=3.12"
 dependencies = [
     "hyundai-kia-connect-api",
     "cloudscraper",
-    "flask",
+    "fastapi",
+    "uvicorn[standard]",
     "requests",
 ]
 

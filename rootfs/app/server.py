@@ -1,5 +1,5 @@
 """
-Flask API Server for Hyundai Bluelink Control
+FastAPI Server for Hyundai Bluelink Control
 Runs as a Home Assistant Add-on
 """
 
@@ -7,7 +7,10 @@ import os
 import sys
 import json
 import logging
-from flask import Flask, jsonify, request
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 import requests
 import cloudscraper
 
@@ -34,9 +37,6 @@ requests.Session = PatchedSession
 from hyundai_kia_connect_api import VehicleManager
 from hyundai_kia_connect_api import const
 from hyundai_kia_connect_api import ClimateRequestOptions
-
-# Flask app
-app = Flask(__name__)
 
 # Load configuration from Home Assistant options.json
 def load_config():
@@ -130,27 +130,48 @@ def get_vehicle_manager():
         return None
 
 
-@app.route('/health', methods=['GET'])
-def health():
+# Lifespan context manager for startup/shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize VehicleManager
+    logger.info("Starting up FastAPI server...")
+    get_vehicle_manager()
+    yield
+    # Shutdown
+    logger.info("Shutting down FastAPI server...")
+
+# FastAPI app with auto-docs
+app = FastAPI(
+    title="Hyundai Bluelink Control API",
+    description="Control your Hyundai/Kia vehicle via Bluelink/UVO",
+    version="1.2.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+
+@app.get("/health")
+async def health():
     """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'service': 'hyundai-bluelink'}), 200
+    return {"status": "healthy", "service": "hyundai-bluelink"}
 
 
-@app.route('/status', methods=['GET'])
-def get_status():
+@app.get("/status")
+async def get_status():
     """Get vehicle status"""
     vm = get_vehicle_manager()
     if not vm:
-        return jsonify({'error': 'Failed to connect to vehicle service'}), 500
+        raise HTTPException(status_code=500, detail="Failed to connect to vehicle service")
     
     try:
         vm.update_all_vehicles_with_cached_state()
         vehicle = vm.vehicles.get(CONFIG['vehicle_id'])
         
         if not vehicle:
-            return jsonify({'error': 'Vehicle not found'}), 404
+            raise HTTPException(status_code=404, detail="Vehicle not found")
         
-        return jsonify({
+        return {
             'name': vehicle.name,
             'model': vehicle.model,
             'odometer': vehicle.odometer,
@@ -158,19 +179,19 @@ def get_status():
             'is_engine_running': vehicle.engine_is_running,
             'air_temperature': vehicle.air_temperature,
             'last_updated_at': str(vehicle.last_updated_at)
-        }), 200
+        }
         
     except Exception as e:
         logger.error(f"Error getting status: {e}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.route('/start', methods=['POST'])
-def start_car():
+@app.post("/start")
+async def start_car():
     """Start the car with climate control"""
     vm = get_vehicle_manager()
     if not vm:
-        return jsonify({'error': 'Failed to connect to vehicle service'}), 500
+        raise HTTPException(status_code=500, detail="Failed to connect to vehicle service")
     
     try:
         logger.info("Starting vehicle...")
@@ -189,19 +210,19 @@ def start_car():
         vm.start_climate(CONFIG['vehicle_id'], options)
         logger.info("✅ Vehicle started successfully")
         
-        return jsonify({'status': 'success', 'action': 'start'}), 200
+        return {"status": "success", "action": "start"}
         
     except Exception as e:
         logger.error(f"Error starting vehicle: {e}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.route('/stop', methods=['POST'])
-def stop_car():
+@app.post("/stop")
+async def stop_car():
     """Stop the car"""
     vm = get_vehicle_manager()
     if not vm:
-        return jsonify({'error': 'Failed to connect to vehicle service'}), 500
+        raise HTTPException(status_code=500, detail="Failed to connect to vehicle service")
     
     try:
         logger.info("Stopping vehicle...")
@@ -210,58 +231,59 @@ def stop_car():
         try:
             vm.stop_climate(CONFIG['vehicle_id'])
             logger.info("✅ Vehicle stopped successfully with stop_climate")
-            return jsonify({'status': 'success', 'action': 'stop', 'method': 'stop_climate'}), 200
+            return {"status": "success", "action": "stop", "method": "stop_climate"}
         except AttributeError:
             # If stop_climate doesn't exist, try sending climate=False
             logger.warning("stop_climate not available, trying alternative method...")
             options = ClimateRequestOptions(climate=False)
             vm.start_climate(CONFIG['vehicle_id'], options)
             logger.info("✅ Vehicle stopped successfully with climate=False")
-            return jsonify({'status': 'success', 'action': 'stop', 'method': 'climate_false'}), 200
+            return {"status": "success", "action": "stop", "method": "climate_false"}
         
     except Exception as e:
         logger.error(f"Error stopping vehicle: {e}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.route('/lock', methods=['POST'])
-def lock_car():
+@app.post("/lock")
+async def lock_car():
     """Lock the car"""
     vm = get_vehicle_manager()
     if not vm:
-        return jsonify({'error': 'Failed to connect to vehicle service'}), 500
+        raise HTTPException(status_code=500, detail="Failed to connect to vehicle service")
     
     try:
         logger.info("Locking vehicle...")
         vm.lock(CONFIG['vehicle_id'])
         logger.info("✅ Vehicle locked successfully")
         
-        return jsonify({'status': 'success', 'action': 'lock'}), 200
+        return {"status": "success", "action": "lock"}
         
     except Exception as e:
         logger.error(f"Error locking vehicle: {e}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.route('/unlock', methods=['POST'])
-def unlock_car():
+@app.post("/unlock")
+async def unlock_car():
     """Unlock the car"""
     vm = get_vehicle_manager()
     if not vm:
-        return jsonify({'error': 'Failed to connect to vehicle service'}), 500
+        raise HTTPException(status_code=500, detail="Failed to connect to vehicle service")
     
     try:
         logger.info("Unlocking vehicle...")
         vm.unlock(CONFIG['vehicle_id'])
         logger.info("✅ Vehicle unlocked successfully")
         
-        return jsonify({'status': 'success', 'action': 'unlock'}), 200
+        return {"status": "success", "action": "unlock"}
         
     except Exception as e:
         logger.error(f"Error unlocking vehicle: {e}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == '__main__':
-    logger.info(f"Starting Flask server on port {CONFIG['port']}...")
-    app.run(host='0.0.0.0', port=CONFIG['port'], debug=False)
+    import uvicorn
+    logger.info(f"Starting FastAPI server on port {CONFIG['port']}...")
+    uvicorn.run(app, host='0.0.0.0', port=CONFIG['port'], log_level="info")

@@ -14,7 +14,8 @@ COPY rootfs/app/server.py /app/server.py
 RUN pip3 install --no-cache-dir --break-system-packages \
     hyundai-kia-connect-api \
     cloudscraper \
-    flask \
+    fastapi \
+    "uvicorn[standard]" \
     requests
 
 # Create data directory
