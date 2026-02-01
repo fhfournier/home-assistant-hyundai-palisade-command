@@ -1,4 +1,0 @@
-hyundai-kia-connect-api
-cloudscraper
-flask
-requests
