@@ -11,7 +11,7 @@ WORKDIR /app
 COPY rootfs/app/server.py /app/server.py
 
 # Install Python dependencies with pip
-RUN pip3 install --no-cache-dir \
+RUN pip3 install --no-cache-dir --break-system-packages \
     hyundai-kia-connect-api \
     cloudscraper \
     flask \
