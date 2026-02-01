@@ -1,33 +1,27 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-# Install Python and UV
-RUN apk add --no-cache \
-    python3 \
-    py3-pip \
-    libstdc++ \
-    ca-certificates \
-    && pip3 install --no-cache-dir uv
+# Install Python
+RUN apk add --no-cache python3 py3-pip
 
 # Set working directory
 WORKDIR /app
 
-# Copy project files
-COPY pyproject.toml /app/pyproject.toml
+# Copy application
 COPY rootfs/app/server.py /app/server.py
 
-# Install dependencies with UV
-RUN uv pip install --system --no-cache \
+# Install Python dependencies with pip
+RUN pip3 install --no-cache-dir \
     hyundai-kia-connect-api \
     cloudscraper \
     flask \
     requests
 
-# Create data directory for Home Assistant config
+# Create data directory
 RUN mkdir -p /data
 
 # Expose port
 EXPOSE 8099
 
-# Launch server
+# Start server
 CMD ["python3", "/app/server.py"]
